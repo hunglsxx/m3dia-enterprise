@@ -3,8 +3,6 @@ import ffmpeg from 'fluent-ffmpeg';
 import mime from 'mime-types';
 import path from 'path';
 import fs from 'fs';
-import Os from 'os';
-import { spawnSync } from 'child_process';
 import ffmpegPath from 'ffmpeg-static';
 import ffprobePath from 'ffprobe-static';
 
@@ -17,10 +15,6 @@ export interface UtilConfig {
 export interface InitConfig {
     inputPath: string,
     outputPath?: string
-}
-
-declare var process: {
-    pkg: any
 }
 
 export class FfmpegUtil extends EventEmitter {
@@ -39,47 +33,8 @@ export class FfmpegUtil extends EventEmitter {
             `${(path.parse(this.inputPath)).name}-${Date.now()}-convert.mp4`
         ));
 
-        // if (process.pkg) this._configFfmpeg();
-        console.log(ffmpegPath, ffprobePath?.path);
-
         if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath);
         if (ffprobePath) ffmpeg.setFfprobePath(ffprobePath.path);
-    }
-
-    private _copy(source: any, target: any) {
-        if (process.pkg) {
-            const data = fs.readFileSync(source);
-            fs.writeFileSync(target, data);
-        } else {
-            fs.copyFileSync(source, target);
-        }
-    }
-
-    private _configFfmpeg() {
-        let os = Os.platform();
-        let ext = '';
-        if (os === 'win32') ext = '.exe';
-
-        const ffmpegPath = path.join(__dirname, '../assets/ffmpeg' + ext);
-        const ffprobePath = path.join(__dirname, '../assets/ffprobe' + ext);
-
-        const pwd = spawnSync('pwd', { encoding: 'utf-8', shell: true });
-        const targetDir = pwd.stdout.toString().trim();
-
-        const ffmpegTmp = path.join(targetDir, 'ffmpeg' + ext);
-        const ffprobeTmp = path.join(targetDir, 'ffprobe' + ext);
-
-        if (!fs.existsSync(ffmpegTmp)) {
-            this._copy(ffmpegPath, ffmpegTmp);
-            fs.chmodSync(ffmpegTmp, 0o755);
-        }
-        if (!fs.existsSync(ffprobeTmp)) {
-            this._copy(ffprobePath, ffprobeTmp);
-            fs.chmodSync(ffprobeTmp, 0o755);
-        }
-
-        ffmpeg.setFfmpegPath(ffmpegTmp);
-        ffmpeg.setFfprobePath(ffprobeTmp);
     }
 
     private get _inputDir(): string {

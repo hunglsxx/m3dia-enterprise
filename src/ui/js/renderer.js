@@ -4,6 +4,9 @@ function clear() {
     $('#m3dia-progress').css('width', `0%`);
     $('#m3dia-progress').html(`0%`);
 
+    $('#m3dia-progress').removeClass('bg-success');
+    $('#m3dia-progress').addClass('progress-bar-animated');
+    
     $("#m3dia-result").hide();
     $('#m3dia-result').attr('href', '');
     $('#m3dia-result img').attr('src', "");
@@ -39,9 +42,14 @@ window.m3dia.on('ffmpeg-end', function(data) {
 
 window.m3dia.on('ffmpeg-screenshot', function(base64) {
     $('#m3dia-result img').attr('src', `data:image/png;base64, ${base64}`);
+
+    $('#m3dia-progress').removeClass('progress-bar-animated');
+    $('#m3dia-progress').addClass('bg-success');
+    $('#m3dia-progress').html(`Finish`);
 });
 
 $('#m3dia-convert').click(async () => {
+    clear();
     let files = $("#m3dia-file").prop('files');
     if(files && files.length) {
         $('#m3dia-convert').prop('disabled', true);
