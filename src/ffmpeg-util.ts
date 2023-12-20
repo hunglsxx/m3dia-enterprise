@@ -3,8 +3,10 @@ import ffmpeg from 'fluent-ffmpeg';
 import mime from 'mime-types';
 import path from 'path';
 import fs from 'fs';
-import ffmpegPath from 'ffmpeg-static';
-import ffprobePath from 'ffprobe-static';
+import ffmpegStaticPath from 'ffmpeg-static';
+import ffprobeStaticPath from 'ffprobe-static';
+import { dialog } from 'electron';
+import Os from 'os';
 
 export interface UtilConfig {
     inputPath: string,
@@ -32,28 +34,41 @@ export class FfmpegUtil extends EventEmitter {
             this._inputDir,
             `${(path.parse(this.inputPath)).name}-${Date.now()}-convert.mp4`
         ));
+        this._configFfmpeg();
+    }
 
-        if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath);
-        if (ffprobePath) ffmpeg.setFfprobePath(ffprobePath.path);
+    private _configFfmpeg() {
+        const os = Os.platform();
+        const arch = Os.arch();
+        if (ffmpegStaticPath) {
+            let ffmpegPath = ffmpegStaticPath.replace('app.asar', 'app.asar.unpacked');
+
+            if (os == 'win32') {
+                ffmpegPath = path.join(__dirname, 'ffmpeg', `win32-${arch}`, 'ffmpeg.exe');
+            }
+
+            ffmpeg.setFfmpegPath(ffmpegPath);
+            // this._alert(`${ffmpegPath} exist ${fs.existsSync(ffmpegPath)}`, 'info');
+        }
+
+        if (ffprobeStaticPath && ffprobeStaticPath.path) {
+            let ffprobePath = ffprobeStaticPath.path.replace('app.asar', 'app.asar.unpacked');
+            ffmpeg.setFfprobePath(ffprobePath);
+            // this._alert(`${ffprobePath} exist ${fs.existsSync(ffprobePath)}`, 'info');
+        }
+    }
+
+    private _alert(message: string, type: any): void {
+        dialog.showMessageBoxSync({
+            title: 'GoStream Info',
+            type: type,
+            message: message,
+            icon: path.join(__dirname, '../icon.png'),
+        });
     }
 
     private get _inputDir(): string {
         return path.parse(this.inputPath).dir;
-    }
-
-
-    static async initialize(opts: InitConfig): Promise<FfmpegUtil> {
-        let metadata = await FfmpegUtil.metadata(opts.inputPath);
-        return new FfmpegUtil({ ...opts, metadata });
-    }
-
-    public static metadata(inputPath: string): any {
-        return new Promise((resolve, reject) => {
-            ffmpeg(inputPath).ffprobe((err: any, metadata: any) => {
-                if (err) return reject(err);
-                return resolve(metadata);
-            });
-        });
     }
 
     private get _config(): any {
@@ -75,6 +90,32 @@ export class FfmpegUtil extends EventEmitter {
                 ]
             }
         };
+    }
+
+    static async initialize(opts: InitConfig): Promise<FfmpegUtil> {
+        try {
+            let instance = new FfmpegUtil({ ...opts });
+            let metadata = await FfmpegUtil.metadata(opts.inputPath);
+            instance.metadata = metadata;
+            return instance;
+        } catch (error) {
+            dialog.showMessageBoxSync({
+                title: 'GoStream Info',
+                type: 'warning',
+                message: `Error ${error}`,
+                icon: path.join(__dirname, '../icon.png'),
+            });
+            throw error;
+        }
+    }
+
+    public static metadata(inputPath: string): any {
+        return new Promise((resolve, reject) => {
+            ffmpeg(inputPath).ffprobe((err: any, metadata: any) => {
+                if (err) return reject(err);
+                return resolve(metadata);
+            });
+        });
     }
 
     public get ffmpegOptions(): any {

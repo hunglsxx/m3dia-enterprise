@@ -1,4 +1,4 @@
-import { app, BrowserView, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { FfmpegUtil } from './ffmpeg-util';
@@ -10,10 +10,10 @@ function createWindow(): void {
             preload: path.join(__dirname, "preload.js")
         },
         width: 800,
-        icon: path.join(app.getAppPath(), 'icon.png'),
+        icon: path.join(app.getAppPath(), 'icon'),
     });
 
-    mainWindow.loadFile(path.join(__dirname, "ui/home.html"));
+    mainWindow.loadFile(path.join(__dirname, "index.html"));
 
     mainWindow.webContents.setWindowOpenHandler((details) => {
         require("electron").shell.openExternal(details.url);
@@ -52,9 +52,14 @@ async function convert(event: any, path: string): Promise<void> {
             event.sender.send('ffmpeg-screenshot', base64);
         });
 
+        ffmpegUtil.on('screenshot-error', (error) => {
+            event.sender.send('ffmpeg-screenshot-error', error);
+        });
+
         ffmpegUtil.ffmpegConvert();
 
     } catch (error) {
+        event.sender.send('ffmpeg-error', error);
         throw error;
     }
 }
